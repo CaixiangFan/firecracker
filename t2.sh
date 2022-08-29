@@ -1,4 +1,56 @@
 #!/bin/bash
+# install docker
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common unzip
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+sudo apt-get -y update
+sudo apt-get -y install docker-ce docker-ce-cli containerd.io
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+
+newgrp docker
+# get kernel and rootfs
+arch=`uname -m`
+dest_kernel="hello-vmlinux.bin"
+dest_rootfs="hello-rootfs.ext4"
+image_bucket_url="https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/$arch"
+
+if [ ${arch} = "x86_64" ]; then
+    kernel="${image_bucket_url}/kernels/vmlinux.bin"
+    rootfs="${image_bucket_url}/rootfs/bionic.rootfs.ext4"
+elif [ ${arch} = "aarch64" ]; then
+    kernel="${image_bucket_url}/kernels/vmlinux.bin"
+    rootfs="${image_bucket_url}/rootfs/bionic.rootfs.ext4"
+else
+    echo "Cannot run firecracker on $arch architecture!"
+    exit 1
+fi
+
+echo "Downloading $kernel..."
+curl -fsSL -o $dest_kernel $kernel
+
+echo "Downloading $rootfs..."
+curl -fsSL -o $dest_rootfs $rootfs
+
+echo "Saved kernel file to $dest_kernel and root block device to $dest_rootfs."
+
+# install docker
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common unzip
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+sudo apt-get -y update
+sudo apt-get -y install docker-ce docker-ce-cli containerd.io
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+newgrp docker
 # build kernel
 config="resources/guest_configs/microvm-kernel-x86_64-5.10.config"
 ./tools/devtool build_kernel -c $config -n 8
@@ -77,8 +129,8 @@ curl --unix-socket /tmp/firecracker.socket -i  \
   -H 'Accept: application/json'            \
   -H 'Content-Type: application/json'      \
   -d '{
-      "vcpu_count": 4,
-      "mem_size_mib": 8192
+      "vcpu_count": 2,
+      "mem_size_mib": 2048
   }'
 
 # start instance
